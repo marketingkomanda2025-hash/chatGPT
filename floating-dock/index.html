@@ -170,7 +170,7 @@ input[type=range]{max-width:125px;accent-color:var(--accent)}
   const toastEl=document.getElementById('toast');
   const mic=document.getElementById('mic');
   let tab='home';let toastTimeout;let glassOpacity=.79;
-  const welcome='Привет! Я тестовый помощник Floating Dock. Спроси меня про жесты, оформление, навигацию или развитие приложения — отвечу с небольшой задержкой.';
+  const welcome='Привет! Я Хрюндель 🐽 — тестовый чат-бот Floating Dock. Спроси меня про жесты, оформление, навигацию или развитие приложения. Я отвечу с небольшой задержкой!';
   const messages=[{role:'bot',text:welcome}];
   const replyQueue=[];let botTyping=false;let chatVersion=0;let lastTopic='';let unread=0;
   const header=()=>`<div class="topbar"><div class="wordmark"><span class="mark">F</span><span>FLOAT / LAB</span></div><span class="serial">VISUAL PROTOTYPE — 01</span></div>`;
@@ -202,12 +202,12 @@ input[type=range]{max-width:125px;accent-color:var(--accent)}
     const bubbles=messages.map(m=>'<div class="chat-row '+(m.role==='user'?'user':'assistant')+'"><div class="chat-bubble '+(m.role==='user'?'mine':'')+'">'+escapeHtml(m.text)+'</div></div>').join('');
     return header()+
       '<div class="eyebrow">Коммуникация</div>'+
-      '<h1>Диалог<br><em>на ходу.</em></h1>'+
-      '<div class="chat-head"><span class="chat-presence">Демо-помощник · локально</span><button type="button" class="chat-clear" id="clearChat">Очистить чат</button></div>'+
+      '<h1>Хрюндель<br><em>на связи.</em></h1>'+
+      '<div class="chat-head"><span class="chat-presence">Хрюндель · локальный бот</span><button type="button" class="chat-clear" id="clearChat">Очистить чат</button></div>'+
       '<p class="chat-note">Ответы на знакомые темы — с задержкой от 0,3 до 3 секунд. Это сценарный бот, не подключённый к настоящему ИИ. Сообщения не отправляются на сервер и исчезнут при обновлении страницы.</p>'+
       '<div id="chatMessages" role="log" aria-label="Сообщения диалога" aria-live="polite" aria-relevant="additions text">'+
         bubbles+
-        (botTyping?'<div class="chat-row assistant" aria-label="Помощник печатает"><div class="chat-bubble typing-bubble"><span></span><span></span><span></span></div></div>':'')+
+        (botTyping?'<div class="chat-row assistant" aria-label="Хрюндель печатает"><div class="chat-bubble typing-bubble"><span></span><span></span><span></span></div></div>':'')+
       '</div>'+
       (messages.length===1?'<div class="chat-promptlist"><button class="chat-prompt" data-prompt="Как свернуть панель?">Как свернуть панель?</button><button class="chat-prompt" data-prompt="Что ты умеешь?">Что ты умеешь?</button><button class="chat-prompt" data-prompt="Можно подключить настоящий ИИ?">Можно подключить ИИ?</button></div>':'');
   }
@@ -223,15 +223,15 @@ input[type=range]{max-width:125px;accent-color:var(--accent)}
       return Number.isFinite(result)?'Получается '+Number(result.toFixed(5))+'. Даже для тестового чата я умею немного считать.':'На ноль делить нельзя. Попробуем другой пример?';
     }
     if(/(^|\s)(привет|здравствуй|здравствуйте|добрый день|доброе утро|добрый вечер|хай)(\s|!|\.|,|$)/.test(t))
-      return next('greeting',['Привет! Давай проверим интерфейс в деле. Например, спроси, как свернуть панель или изменить прозрачность.','Привет! Я небольшой бот внутри прототипа. Можем обсудить сам интерфейс, его жесты и дальнейшую разработку.']);
+      return next('greeting',['Привет! Давай проверим интерфейс в деле. Например, спроси, как свернуть панель или изменить прозрачность.','Привет! Я Хрюндель. Можем обсудить интерфейс, его жесты и дальнейшую разработку.']);
     if(/спасибо|благодарю|отлично|супер|круто|молодец/.test(t))
       return next('greeting',['Рад помочь! Хочешь попробовать следующий сценарий — например, голосовой ввод?','Здорово! Можно продолжить разговор или свернуть панель, чтобы проверить полноэкранное чтение.']);
     if(/пока|до свидания|до встречи/.test(t))
       return next('greeting',['До встречи! Переписка в этой демонстрации исчезнет при перезагрузке страницы.','Пока! Возвращайся проверить новые анимации и сценарии.']);
     if(/как дела|как настроение|как поживаешь/.test(t))
       return next('greeting',['Работаю в демонстрационном режиме и готов отвечать. Как тебе ощущение от плавающих кнопок?','Отлично, насколько это возможно для локального скрипта :) Что сейчас интереснее проверить — жесты или сам диалог?']);
-    if(/кто ты|ты человек|как зовут|что ты такое/.test(t))
-      return next('about',['Я сценарный бот Floating Dock. Я не настоящая языковая модель: распознаю несколько тем и выбираю подходящие ответы. Зато работаю прямо в браузере.','Я демо-собеседник. Моя задача — показать, как ощущается диалог на фоне плавающего интерфейса, без сервера и подписок.']);
+    if(/кто ты|ты человек|как (тебя|тво[её]) зовут|твое имя|что ты такое|хрюндель/.test(t))
+      return next('about',['Я Хрюндель! 🐽 Сценарный бот Floating Dock. Распознаю несколько тем и выбираю подходящие ответы. Я пока не настоящая языковая модель, зато работаю прямо в браузере.','Зовут меня Хрюндель. Я демо-собеседник: показываю, как ощущается диалог на фоне плавающего интерфейса, без сервера и подписок.']);
     if(/что ты умеешь|что можешь|какие возможности|о чем поговорим/.test(t))
       return next('about',['Могу объяснить сворачивание свайпом, темы, прозрачность, четыре раздела, голосовой ввод и варианты подключения настоящего ИИ. На незнакомую тему честно скажу, что это пока демо.','Понимаю вопросы об интерфейсе Floating Dock, немного считаю и удерживаю тему простых уточнений. Для свободного разговора потребуется подключение ИИ через сервер.']);
     if(/настоящ(ий|его|им|ему|ая)\s+ии|искусственн|нейросет|chatgpt|gpt|api|llm|модель|умн(ый|ого)\s+чат/.test(t))
