@@ -1,6 +1,6 @@
 package com.floatingdock.visual;
 
-import android.app.Activity;
+import androidx.activity.ComponentActivity;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.graphics.Color;
@@ -28,7 +28,7 @@ import org.json.JSONObject;
  * No API keys are stored in the app. Speech transcription uses the
  * system speech-recognition activity and sends only text to the WebView.
  */
-public final class MainActivity extends Activity {
+public final class MainActivity extends ComponentActivity {
     private static final String HOME_URL =
             "https://marketingkomanda2025-hash.github.io/chatGPT/floating-dock/";
     private static final String ALLOWED_HOST = "marketingkomanda2025-hash.github.io";
