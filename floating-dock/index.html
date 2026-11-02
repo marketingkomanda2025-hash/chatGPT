@@ -115,9 +115,17 @@ input[type=range]{max-width:125px;accent-color:var(--accent)}
 .chat-row .chat-bubble{max-width:min(89%,360px);width:fit-content;margin-bottom:0;white-space:pre-wrap}
 .chat-row.assistant .chat-bubble{background:rgba(var(--glass-rgb),.24);color:var(--ink)}
 .chat-row.user .chat-bubble{margin-left:auto}
-.chat-promptlist{display:flex;flex-wrap:wrap;gap:8px;margin:15px 0 25px}
-.chat-prompt{background:var(--nav-selected);color:var(--ink);border:1px solid var(--thin);border-radius:14px;padding:10px 12px;font-size:12px;text-align:left}
+.chat-quick{position:sticky;top:0;z-index:3;background:rgba(var(--glass-rgb),.94);border:1px solid var(--glass-border);border-radius:19px;padding:11px 11px 10px;margin:17px 0 20px;box-shadow:0 8px 28px rgba(0,0,0,.12);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+.chat-quick-title{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:0 0 7px;color:var(--ink);font-size:11px;font-weight:700}
+.chat-quick-hint{color:var(--faint);font-size:10px;font-weight:400}
+.chat-topic-row{display:grid;grid-template-columns:67px minmax(0,1fr);gap:5px;align-items:center;margin:5px 0}
+.chat-topic-label{font-size:10px;color:var(--faint);font-weight:600}
+.chat-chip-track{display:flex;gap:6px;overflow-x:auto;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none;scroll-snap-type:x proximity;padding:2px 0 4px}
+.chat-chip-track::-webkit-scrollbar{display:none}
+.chat-prompt{flex:0 0 auto;scroll-snap-align:start;background:var(--nav-selected);color:var(--ink);border:1px solid var(--thin);border-radius:11px;padding:8px 10px;font-size:11px;line-height:1.2;white-space:nowrap;min-height:34px;text-align:left}
 .chat-prompt:hover{background:var(--item-hover)}
+.chat-prompt:active{transform:scale(.96)}
+@media(max-width:380px){.chat-topic-row{grid-template-columns:57px minmax(0,1fr)}.chat-topic-label{font-size:9px}.chat-quick{padding-left:9px;padding-right:9px}}
 .typing-bubble{display:flex;align-items:center;gap:5px;min-width:70px;min-height:44px}
 .typing-bubble span{display:block;height:6px;width:6px;border-radius:50%;background:var(--accent);animation:typingPulse 1.05s infinite ease-in-out}
 .typing-bubble span:nth-child(2){animation-delay:.17s}
@@ -173,6 +181,27 @@ input[type=range]{max-width:125px;accent-color:var(--accent)}
   const welcome='Привет! Я Хрюндель 🐽 — тестовый чат-бот Floating Dock. Спроси меня про жесты, оформление, навигацию или развитие приложения. Я отвечу с небольшой задержкой!';
   const messages=[{role:'bot',text:welcome}];
   const replyQueue=[];let botTyping=false;let chatVersion=0;let lastTopic='';let unread=0;
+  // Keep every available scripted scenario accessible, even after messages are sent.
+  const quickTopics=[
+    {label:'Общение',items:[
+      ['Привет','Привет!'],['Как дела?','Как дела?'],['Как тебя зовут?','Как тебя зовут?'],
+      ['Что умеешь?','Что ты умеешь?'],['Спасибо','Спасибо!'],['Пока','Пока!'],
+      ['2 + 3 = ?','Сколько будет 2 + 3?'],['Подробнее','Расскажи подробнее'],
+      ['А почему?','А почему?'],['Понятно','Понятно']
+    ]},
+    {label:'Интерфейс',items:[
+      ['Свернуть','Как свернуть панель?'],['Развернуть','Как развернуть панель?'],
+      ['Свайпы','Как работают свайпы?'],['Тема','Как переключить тему?'],
+      ['Прозрачность','Как настроить прозрачность?'],['Навигация','Как устроена навигация?'],
+      ['Анимация','Что с анимацией?']
+    ]},
+    {label:'Функции',items:[
+      ['Микрофон','Как пользоваться голосовым вводом?'],
+      ['Карта','Как работает карта?'],['Настоящий ИИ','Можно подключить настоящий ИИ?'],
+      ['Android / APK','Как получить APK?']
+    ]}
+  ];
+  const quickScroll=[0,0,0];
   const header=()=>`<div class="topbar"><div class="wordmark"><span class="mark">F</span><span>FLOAT / LAB</span></div><span class="serial">VISUAL PROTOTYPE — 01</span></div>`;
   const section=(n,title,first,second)=>`<section class="story"><div class="section-divider"></div><div class="section-no">${n}</div><h2>${title}</h2><p>${first}</p><p>${second}</p></section>`;
   function home(){return header()+`
@@ -198,6 +227,17 @@ input[type=range]{max-width:125px;accent-color:var(--accent)}
     <div class="inline-tags"><span class="tag">Демо-профиль</span><span class="tag">Локальные данные</span><span class="tag">Без сервера</span></div>
     ${section('01 / ВИЗУАЛ','Единое поведение','Независимо от экрана строка общения и навигация остаются на одинаковом месте. Привычный жест одинаково работает во всех разделах.','Такой подход даёт ощущение постоянной точки управления, но не забирает ценную площадь у контента.')}
     ${section('02 / ВОЗМОЖНОСТИ','Можно развивать','В реальном продукте личный кабинет может содержать сведения пользователя, его документы, настройки и историю действий.','Пока здесь только текст, необходимый для проверки визуальных состояний и прокрутки под закреплённой панелью.')}`;}
+  function quickQuestions(){
+    return '<section class="chat-quick" aria-label="Быстрые вопросы Хрюнделю">'+
+      '<div class="chat-quick-title"><span>Спросить Хрюнделя</span><span class="chat-quick-hint">Листай вопросы вбок →</span></div>'+
+      quickTopics.map((topic,i)=>
+        '<div class="chat-topic-row"><span class="chat-topic-label">'+escapeHtml(topic.label)+'</span>'+
+        '<div class="chat-chip-track" data-scroll-group="'+i+'" role="group" aria-label="'+escapeHtml(topic.label)+'">'+
+        topic.items.map(([label,question])=>
+          '<button class="chat-prompt" type="button" data-prompt="'+escapeHtml(question)+'">'+escapeHtml(label)+'</button>'
+        ).join('')+'</div></div>'
+      ).join('')+'</section>';
+  }
   function chat(){
     const bubbles=messages.map(m=>'<div class="chat-row '+(m.role==='user'?'user':'assistant')+'"><div class="chat-bubble '+(m.role==='user'?'mine':'')+'">'+escapeHtml(m.text)+'</div></div>').join('');
     return header()+
@@ -205,11 +245,11 @@ input[type=range]{max-width:125px;accent-color:var(--accent)}
       '<h1>Хрюндель<br><em>на связи.</em></h1>'+
       '<div class="chat-head"><span class="chat-presence">Хрюндель · локальный бот</span><button type="button" class="chat-clear" id="clearChat">Очистить чат</button></div>'+
       '<p class="chat-note">Ответы на знакомые темы — с задержкой от 0,3 до 3 секунд. Это сценарный бот, не подключённый к настоящему ИИ. Сообщения не отправляются на сервер и исчезнут при обновлении страницы.</p>'+
+      quickQuestions()+
       '<div id="chatMessages" role="log" aria-label="Сообщения диалога" aria-live="polite" aria-relevant="additions text">'+
         bubbles+
         (botTyping?'<div class="chat-row assistant" aria-label="Хрюндель печатает"><div class="chat-bubble typing-bubble"><span></span><span></span><span></span></div></div>':'')+
-      '</div>'+
-      (messages.length===1?'<div class="chat-promptlist"><button class="chat-prompt" data-prompt="Как свернуть панель?">Как свернуть панель?</button><button class="chat-prompt" data-prompt="Что ты умеешь?">Что ты умеешь?</button><button class="chat-prompt" data-prompt="Можно подключить настоящий ИИ?">Можно подключить ИИ?</button></div>':'');
+      '</div>';
   }
   function oneOf(variants){return variants[Math.floor(Math.random()*variants.length)];}
   function botReply(input){
@@ -340,7 +380,7 @@ input[type=range]{max-width:125px;accent-color:var(--accent)}
     message.dispatchEvent(new Event('input',{bubbles:true}));
   },true);
   function escapeHtml(s){return s.replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
-  function render(){page.innerHTML=({home,settings,profile,chat}[tab])();document.querySelectorAll('.nav-item').forEach(b=>{b.classList.toggle('active',b.dataset.tab===tab);b.classList.toggle('has-unread',b.dataset.tab==='chat'&&unread>0);b.setAttribute('aria-current',b.dataset.tab===tab?'page':'false')});if(tab==='settings'){const isDark=document.documentElement.dataset.theme==='dark';document.getElementById('darkBtn').classList.toggle('chosen',isDark);document.getElementById('lightBtn').classList.toggle('chosen',!isDark)}}
+  function render(){page.innerHTML=({home,settings,profile,chat}[tab])();if(tab==='chat')page.querySelectorAll('.chat-chip-track').forEach((el,i)=>{el.scrollLeft=quickScroll[i]||0});document.querySelectorAll('.nav-item').forEach(b=>{b.classList.toggle('active',b.dataset.tab===tab);b.classList.toggle('has-unread',b.dataset.tab==='chat'&&unread>0);b.setAttribute('aria-current',b.dataset.tab===tab?'page':'false')});if(tab==='settings'){const isDark=document.documentElement.dataset.theme==='dark';document.getElementById('darkBtn').classList.toggle('chosen',isDark);document.getElementById('lightBtn').classList.toggle('chosen',!isDark)}}
   function notify(s){clearTimeout(toastTimeout);toastEl.textContent=s;toastEl.classList.add('show');toastTimeout=setTimeout(()=>toastEl.classList.remove('show'),2600)}
   function collapse(){if(shell.classList.contains('is-collapsed'))return;document.activeElement?.blur?.();shell.classList.add('is-collapsed');mini.setAttribute('aria-expanded','false')}
   function expand(){if(!shell.classList.contains('is-collapsed'))return;shell.classList.remove('is-collapsed');mini.setAttribute('aria-expanded','true')}
@@ -351,8 +391,9 @@ input[type=range]{max-width:125px;accent-color:var(--accent)}
   mini.addEventListener('pointerdown',touchStart);mini.addEventListener('pointerup',e=>touchEnd(e,'expand'));mini.addEventListener('pointercancel',()=>gesture=null);
   mini.addEventListener('click',expand);
   document.getElementById('nav').addEventListener('click',e=>{let b=e.target.closest('[data-tab]');if(!b)return;tab=b.dataset.tab;if(tab==='chat')unread=0;render();if(tab==='chat'){scrollChatBottom();focusComposer()}else scroller.scrollTop=0;});
-  page.addEventListener('click',e=>{const prompt=e.target.closest('[data-prompt]');if(prompt){sendChat(prompt.dataset.prompt);focusComposer();return;}if(e.target.closest('#clearChat')){clearChat();return;}const el=e.target.closest('#darkBtn,#lightBtn');if(!el)return;document.documentElement.dataset.theme=el.id==='darkBtn'?'dark':'light';render();});
+  page.addEventListener('click',e=>{const prompt=e.target.closest('[data-prompt]');if(prompt){sendChat(prompt.dataset.prompt);return;}if(e.target.closest('#clearChat')){clearChat();return;}const el=e.target.closest('#darkBtn,#lightBtn');if(!el)return;document.documentElement.dataset.theme=el.id==='darkBtn'?'dark':'light';render();});
   page.addEventListener('input',e=>{if(e.target.id==='glassRange'){glassOpacity=Number(e.target.value)/100;document.documentElement.style.setProperty('--glass-a',String(glassOpacity))}});
+  page.addEventListener('scroll',e=>{if(e.target.classList?.contains('chat-chip-track')){const i=Number(e.target.dataset.scrollGroup);if(Number.isInteger(i)&&i>=0&&i<quickScroll.length)quickScroll[i]=e.target.scrollLeft;}},true);
   document.getElementById('composer').addEventListener('submit',e=>{e.preventDefault();const t=message.value.trim();if(!t){notify('Напишите сообщение или нажмите на микрофон');return;}message.value='';sendChat(t);focusComposer()});
   function speechError(msg){notify(msg||'Голосовой ввод недоступен на этом устройстве');}
   window.receiveTranscription=function(text){if(typeof text==='string'&&text){message.value=(message.value?message.value+' ':'')+text;expand();notify('Речь преобразована в текст');}else{speechError('Речь не распознана');}}
