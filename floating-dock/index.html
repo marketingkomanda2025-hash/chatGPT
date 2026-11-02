@@ -321,6 +321,24 @@ input[type=range]{max-width:125px;accent-color:var(--accent)}
     renderChat();
     notify('Диалог очищен');
   }
+  // Restore focus after each message and allow typing without manually selecting the input.
+  function focusComposer(){
+    if(shell.classList.contains('is-collapsed'))expand();
+    try{message.focus({preventScroll:true})}catch(e){message.focus()}
+  }
+  // Physical keyboards: when nothing editable is focused, start a message from any screen.
+  document.addEventListener('keydown',e=>{
+    if(e.defaultPrevented||e.isComposing||e.ctrlKey||e.altKey||e.metaKey)return;
+    if(e.key.length!==1||/^\s$/.test(e.key))return;
+    const origin=e.target;
+    if(origin&&((origin.isContentEditable)||origin.closest?.('input,textarea,select,[contenteditable],[role="textbox"]')))return;
+    e.preventDefault();
+    focusComposer();
+    const start=message.selectionStart??message.value.length;
+    const end=message.selectionEnd??message.value.length;
+    message.setRangeText(e.key,start,end,'end');
+    message.dispatchEvent(new Event('input',{bubbles:true}));
+  },true);
   function escapeHtml(s){return s.replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
   function render(){page.innerHTML=({home,settings,profile,chat}[tab])();document.querySelectorAll('.nav-item').forEach(b=>{b.classList.toggle('active',b.dataset.tab===tab);b.classList.toggle('has-unread',b.dataset.tab==='chat'&&unread>0);b.setAttribute('aria-current',b.dataset.tab===tab?'page':'false')});if(tab==='settings'){const isDark=document.documentElement.dataset.theme==='dark';document.getElementById('darkBtn').classList.toggle('chosen',isDark);document.getElementById('lightBtn').classList.toggle('chosen',!isDark)}}
   function notify(s){clearTimeout(toastTimeout);toastEl.textContent=s;toastEl.classList.add('show');toastTimeout=setTimeout(()=>toastEl.classList.remove('show'),2600)}
@@ -332,10 +350,10 @@ input[type=range]{max-width:125px;accent-color:var(--accent)}
   expanded.addEventListener('pointerdown',touchStart);expanded.addEventListener('pointerup',e=>touchEnd(e,'collapse'));expanded.addEventListener('pointercancel',()=>gesture=null);
   mini.addEventListener('pointerdown',touchStart);mini.addEventListener('pointerup',e=>touchEnd(e,'expand'));mini.addEventListener('pointercancel',()=>gesture=null);
   mini.addEventListener('click',expand);
-  document.getElementById('nav').addEventListener('click',e=>{let b=e.target.closest('[data-tab]');if(!b)return;tab=b.dataset.tab;if(tab==='chat')unread=0;render();if(tab==='chat')scrollChatBottom();else scroller.scrollTop=0;});
-  page.addEventListener('click',e=>{const prompt=e.target.closest('[data-prompt]');if(prompt){sendChat(prompt.dataset.prompt);return;}if(e.target.closest('#clearChat')){clearChat();return;}const el=e.target.closest('#darkBtn,#lightBtn');if(!el)return;document.documentElement.dataset.theme=el.id==='darkBtn'?'dark':'light';render();});
+  document.getElementById('nav').addEventListener('click',e=>{let b=e.target.closest('[data-tab]');if(!b)return;tab=b.dataset.tab;if(tab==='chat')unread=0;render();if(tab==='chat'){scrollChatBottom();focusComposer()}else scroller.scrollTop=0;});
+  page.addEventListener('click',e=>{const prompt=e.target.closest('[data-prompt]');if(prompt){sendChat(prompt.dataset.prompt);focusComposer();return;}if(e.target.closest('#clearChat')){clearChat();return;}const el=e.target.closest('#darkBtn,#lightBtn');if(!el)return;document.documentElement.dataset.theme=el.id==='darkBtn'?'dark':'light';render();});
   page.addEventListener('input',e=>{if(e.target.id==='glassRange'){glassOpacity=Number(e.target.value)/100;document.documentElement.style.setProperty('--glass-a',String(glassOpacity))}});
-  document.getElementById('composer').addEventListener('submit',e=>{e.preventDefault();const t=message.value.trim();if(!t){notify('Напишите сообщение или нажмите на микрофон');return;}message.value='';message.blur();sendChat(t)});
+  document.getElementById('composer').addEventListener('submit',e=>{e.preventDefault();const t=message.value.trim();if(!t){notify('Напишите сообщение или нажмите на микрофон');return;}message.value='';sendChat(t);focusComposer()});
   function speechError(msg){notify(msg||'Голосовой ввод недоступен на этом устройстве');}
   window.receiveTranscription=function(text){if(typeof text==='string'&&text){message.value=(message.value?message.value+' ':'')+text;expand();notify('Речь преобразована в текст');}else{speechError('Речь не распознана');}}
   window.receiveSpeechError=speechError;
