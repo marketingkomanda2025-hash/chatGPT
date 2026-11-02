@@ -1,6 +1,6 @@
 package com.floatingdock.visual;
 
-import androidx.activity.ComponentActivity;
+import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.graphics.Color;
@@ -15,12 +15,7 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Toast;
 
-import androidx.annotation.Nullable;
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
-
 import java.util.ArrayList;
-import java.util.Locale;
 import org.json.JSONObject;
 
 /**
@@ -28,37 +23,20 @@ import org.json.JSONObject;
  * No API keys are stored in the app. Speech transcription uses the
  * system speech-recognition activity and sends only text to the WebView.
  */
-public final class MainActivity extends ComponentActivity {
+public final class MainActivity extends Activity {
     private static final String HOME_URL =
             "https://marketingkomanda2025-hash.github.io/chatGPT/floating-dock/";
     private static final String ALLOWED_HOST = "marketingkomanda2025-hash.github.io";
     private static final String ALLOWED_PATH = "/chatGPT/floating-dock/";
 
     private WebView webView;
-    private ActivityResultLauncher<Intent> speechLauncher;
+    private static final int SPEECH_REQUEST = 7421;
 
     @Override
-    protected void onCreate(@Nullable Bundle state) {
+    protected void onCreate(Bundle state) {
         super.onCreate(state);
         getWindow().setStatusBarColor(Color.rgb(11, 16, 32));
         getWindow().setNavigationBarColor(Color.rgb(11, 16, 32));
-
-        speechLauncher = registerForActivityResult(
-                new ActivityResultContracts.StartActivityForResult(),
-                result -> {
-                    if (result.getResultCode() != RESULT_OK || result.getData() == null) {
-                        sendSpeechError("Распознавание речи отменено");
-                        return;
-                    }
-                    ArrayList<String> alternatives = result.getData().getStringArrayListExtra(
-                            RecognizerIntent.EXTRA_RESULTS);
-                    if (alternatives == null || alternatives.isEmpty()) {
-                        sendSpeechError("Не удалось распознать речь");
-                    } else {
-                        callWeb("receiveTranscription", alternatives.get(0));
-                    }
-                }
-        );
 
         webView = new WebView(this);
         webView.setBackgroundColor(Color.rgb(11, 16, 32));
@@ -91,6 +69,22 @@ public final class MainActivity extends ComponentActivity {
         webView.loadUrl(HOME_URL);
     }
 
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode != SPEECH_REQUEST) return;
+        if (resultCode != RESULT_OK || data == null) {
+            sendSpeechError("Распознавание речи отменено");
+            return;
+        }
+        ArrayList<String> alternatives = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+        if (alternatives == null || alternatives.isEmpty()) {
+            sendSpeechError("Не удалось распознать речь");
+        } else {
+            callWeb("receiveTranscription", alternatives.get(0));
+        }
+    }
+
     private boolean isTrusted(String uriString) {
         android.net.Uri uri = android.net.Uri.parse(uriString);
         String path = uri.getPath();
@@ -120,7 +114,7 @@ public final class MainActivity extends ComponentActivity {
                 intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ru-RU");
                 intent.putExtra(RecognizerIntent.EXTRA_PROMPT, "Говорите…");
                 try {
-                    speechLauncher.launch(intent);
+                    startActivityForResult(intent, SPEECH_REQUEST);
                 } catch (ActivityNotFoundException error) {
                     sendSpeechError("На устройстве нет приложения для распознавания речи");
                 } catch (Exception error) {
