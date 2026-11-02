@@ -102,6 +102,30 @@ input[type=range]{max-width:125px;accent-color:var(--accent)}
 .demo-avatar{height:60px;width:60px;display:grid;place-items:center;color:#152044;background:linear-gradient(135deg,#a8baff,#8bcce6);border-radius:19px;font-size:21px;font-weight:700;margin-bottom:23px}
 .chat-bubble{margin-bottom:12px;padding:16px 17px;max-width:90%;border-radius:19px 19px 19px 5px;background:var(--card);border:1px solid var(--thin);font-size:14px;line-height:1.6;color:var(--sub);overflow-wrap:anywhere}
 .chat-bubble.mine{border-radius:19px 19px 5px 19px;background:var(--nav-selected);margin-left:auto;color:var(--ink)}
+
+/* Floating Dock: local chat simulator */
+.chat-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:15px 0 17px}
+.chat-presence{font-size:11px;color:var(--sub);display:flex;align-items:center;gap:7px}
+.chat-presence:before{content:"";width:7px;height:7px;background:#64c5a9;box-shadow:0 0 0 4px rgba(100,197,169,.12);border-radius:50%}
+.chat-clear{background:transparent;color:var(--faint);font-size:11px;border:1px solid var(--thin);padding:8px 12px;border-radius:13px}
+.chat-clear:hover{color:var(--ink);background:var(--item-hover)}
+.chat-note{font-size:12px;line-height:1.55;color:var(--faint);margin:0 0 20px}
+.chat-row{display:flex;margin-bottom:10px;animation:chatAppear .22s ease-out}
+.chat-row.user{justify-content:flex-end}
+.chat-row .chat-bubble{max-width:min(89%,360px);width:fit-content;margin-bottom:0;white-space:pre-wrap}
+.chat-row.assistant .chat-bubble{background:rgba(var(--glass-rgb),.24);color:var(--ink)}
+.chat-row.user .chat-bubble{margin-left:auto}
+.chat-promptlist{display:flex;flex-wrap:wrap;gap:8px;margin:15px 0 25px}
+.chat-prompt{background:var(--nav-selected);color:var(--ink);border:1px solid var(--thin);border-radius:14px;padding:10px 12px;font-size:12px;text-align:left}
+.chat-prompt:hover{background:var(--item-hover)}
+.typing-bubble{display:flex;align-items:center;gap:5px;min-width:70px;min-height:44px}
+.typing-bubble span{display:block;height:6px;width:6px;border-radius:50%;background:var(--accent);animation:typingPulse 1.05s infinite ease-in-out}
+.typing-bubble span:nth-child(2){animation-delay:.17s}
+.typing-bubble span:nth-child(3){animation-delay:.34s}
+.nav-item.has-unread:after{content:"";position:absolute;width:7px;height:7px;border-radius:50%;background:var(--accent2);right:18%;top:6px;box-shadow:0 0 0 2px var(--bg)}
+@keyframes chatAppear{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+@keyframes typingPulse{0%,60%,100%{opacity:.33;transform:translateY(0)}30%{opacity:1;transform:translateY(-4px)}}
+
 @media (min-width:700px){.page{padding:46px 38px 220px}.dock-zone{bottom:25px}.swipe-tip{bottom:185px}}
 @media (max-height:550px){.swipe-tip{display:none}.dock-zone{bottom:8px}.nav{height:61px}.nav-item{height:48px;gap:1px}.composer{height:51px}.dock-expanded{gap:7px}.toast{bottom:139px}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition-duration:.01ms!important}}
@@ -145,7 +169,10 @@ input[type=range]{max-width:125px;accent-color:var(--accent)}
   const message=document.getElementById('message');
   const toastEl=document.getElementById('toast');
   const mic=document.getElementById('mic');
-  let tab='home';let toastTimeout;let glassOpacity=.79;const messages=[];
+  let tab='home';let toastTimeout;let glassOpacity=.79;
+  const welcome='Привет! Я тестовый помощник Floating Dock. Спроси меня про жесты, оформление, навигацию или развитие приложения — отвечу с небольшой задержкой.';
+  const messages=[{role:'bot',text:welcome}];
+  const replyQueue=[];let botTyping=false;let chatVersion=0;let lastTopic='';let unread=0;
   const header=()=>`<div class="topbar"><div class="wordmark"><span class="mark">F</span><span>FLOAT / LAB</span></div><span class="serial">VISUAL PROTOTYPE — 01</span></div>`;
   const section=(n,title,first,second)=>`<section class="story"><div class="section-divider"></div><div class="section-no">${n}</div><h2>${title}</h2><p>${first}</p><p>${second}</p></section>`;
   function home(){return header()+`
@@ -157,7 +184,7 @@ input[type=range]{max-width:125px;accent-color:var(--accent)}
     ${section('01 / ИДЕЯ','Панель поверх страницы','Обычная навигация занимает постоянное место на экране. Здесь она размещается поверх основного материала: текст продолжает свободно перемещаться под полупрозрачными элементами.','Эффект матового стекла сохраняет ощущение глубины. Подвижный текст виден сквозь стеклянную поверхность, а содержимое кнопок остаётся читаемым.')}
     ${section('02 / УПРАВЛЕНИЕ','Один свайп — два состояния','Проведите вправо непосредственно по нижней панели. Строка ввода и четыре значка навигации объединятся в компактную кнопку у правого края экрана.','Чтобы вернуть интерфейс, проведите по маленькой кнопке влево или просто нажмите на неё. Переход между состояниями происходит с мягкой анимацией.')}
     <div class="inline-tags"><span class="tag">Плавное сворачивание</span><span class="tag">Стеклянная поверхность</span><span class="tag">Контент под панелью</span></div>
-    ${section('03 / КОММУНИКАЦИЯ','Говорить или печатать','Верхний блок содержит текстовое поле. Введите сообщение, нажмите отправку, и оно появится в разделе «Чат». В Android значок микрофона запускает системное распознавание речи и переносит результат в поле ввода.','Панель не пытается решать все задачи сразу. Её роль — обеспечить быстрый доступ к контакту с приложением, не отвлекая от основной страницы.')}
+    ${section('03 / КОММУНИКАЦИЯ','Говорить или печатать','Верхний блок содержит текстовое поле. Введите сообщение, нажмите отправку, и оно появится в разделе «Чат». Кнопка микрофона запускает распознавание речи, если браузер его поддерживает, а тестовый собеседник отвечает на некоторые вопросы с небольшой случайной задержкой.','Панель не пытается решать все задачи сразу. Её роль — обеспечить быстрый доступ к контакту с приложением, не отвлекая от основной страницы.')}
     ${section('04 / НАВИГАЦИЯ','Четыре точки входа','Ниже расположены четыре кнопки: главный экран, настройки, личный кабинет и чат. Каждая открывает собственный раздел, а плавающий блок остаётся на своём месте.','В настройках можно сравнить светлый и тёмный режимы, а также увеличить или уменьшить прозрачность плавающих блоков.')}
     ${section('05 / ВОСПРИЯТИЕ','Сначала содержание','Этот длинный материал специально нужен для проверки прокрутки. Пролистайте страницу дальше и обратите внимание, как заголовки и абзацы проходят под полупрозрачной панелью.','Попробуйте свернуть элементы, продолжить чтение и затем вернуть их. Важно почувствовать, не мешает ли панель, насколько удобно находить её в свёрнутом виде и хватает ли места для текста.')}
     ${section('06 / СЛЕДУЮЩИЙ ШАГ','От макета к продукту','Когда будет понятна механика, можно менять форму элементов, уровень размытия, длительность движения, расстояния и типографику. Техническая основа уже позволяет быстро проводить подобные эксперименты.','Главная цель первой версии — не готовый продукт, а понятный интерактивный опыт. Проверяем ощущение свободы, выразительность анимации и доступность управления одной рукой.')}
@@ -171,10 +198,131 @@ input[type=range]{max-width:125px;accent-color:var(--accent)}
     <div class="inline-tags"><span class="tag">Демо-профиль</span><span class="tag">Локальные данные</span><span class="tag">Без сервера</span></div>
     ${section('01 / ВИЗУАЛ','Единое поведение','Независимо от экрана строка общения и навигация остаются на одинаковом месте. Привычный жест одинаково работает во всех разделах.','Такой подход даёт ощущение постоянной точки управления, но не забирает ценную площадь у контента.')}
     ${section('02 / ВОЗМОЖНОСТИ','Можно развивать','В реальном продукте личный кабинет может содержать сведения пользователя, его документы, настройки и историю действий.','Пока здесь только текст, необходимый для проверки визуальных состояний и прокрутки под закреплённой панелью.')}`;}
-  function chat(){return header()+`<div class="eyebrow">Коммуникация</div><h1>Диалог<br><em>на ходу.</em></h1><p class="lead">Печатайте сообщение в плавающей строке снизу. Текст появится здесь — это локальная демонстрация, без отправки на сервер.</p><div class="chat-bubble">Привет! Я демонстрационный чат. Напишите или продиктуйте сообщение в нижнем поле, чтобы проверить поведение плавающей строки.</div><div id="chatMessages">${messages.map(text=>`<div class="chat-bubble mine">${escapeHtml(text)}</div>`).join('')}</div><div class="quote">Нижняя панель остаётся доступной даже во время прокрутки диалога.<small>FLOAT / LAB · CHAT</small></div>
-    ${section('01 / СЦЕНАРИЙ','Общение без перехода','Строка ввода доступна на любом экране. Отправленные сообщения можно увидеть в этом разделе. Микрофон на Android использует системный голосовой ввод.','В будущем здесь могут появиться ответы ассистента, история разговоров и более богатые сценарии. Для первого прототипа это не требуется.')}`;}
+  function chat(){
+    const bubbles=messages.map(m=>'<div class="chat-row '+(m.role==='user'?'user':'assistant')+'"><div class="chat-bubble '+(m.role==='user'?'mine':'')+'">'+escapeHtml(m.text)+'</div></div>').join('');
+    return header()+
+      '<div class="eyebrow">Коммуникация</div>'+
+      '<h1>Диалог<br><em>на ходу.</em></h1>'+
+      '<div class="chat-head"><span class="chat-presence">Демо-помощник · локально</span><button type="button" class="chat-clear" id="clearChat">Очистить чат</button></div>'+
+      '<p class="chat-note">Ответы на знакомые темы — с задержкой от 0,3 до 3 секунд. Это сценарный бот, не подключённый к настоящему ИИ. Сообщения не отправляются на сервер и исчезнут при обновлении страницы.</p>'+
+      '<div id="chatMessages" role="log" aria-label="Сообщения диалога" aria-live="polite" aria-relevant="additions text">'+
+        bubbles+
+        (botTyping?'<div class="chat-row assistant" aria-label="Помощник печатает"><div class="chat-bubble typing-bubble"><span></span><span></span><span></span></div></div>':'')+
+      '</div>'+
+      (messages.length===1?'<div class="chat-promptlist"><button class="chat-prompt" data-prompt="Как свернуть панель?">Как свернуть панель?</button><button class="chat-prompt" data-prompt="Что ты умеешь?">Что ты умеешь?</button><button class="chat-prompt" data-prompt="Можно подключить настоящий ИИ?">Можно подключить ИИ?</button></div>':'');
+  }
+  function oneOf(variants){return variants[Math.floor(Math.random()*variants.length)];}
+  function botReply(input){
+    const t=input.toLowerCase().replace(/ё/g,'е').trim();
+    const next=(topic,answers)=>{lastTopic=topic;return oneOf(answers);};
+    const math=t.match(/(-?\d+(?:[.,]\d+)?)\s*([+*×÷\/-])\s*(-?\d+(?:[.,]\d+)?)/);
+    if(math){
+      const a=Number(math[1].replace(',','.')),b=Number(math[3].replace(',','.'));
+      const ops={'+':()=>a+b,'-':()=>a-b,'*':()=>a*b,'×':()=>a*b,'/':()=>a/b,'÷':()=>a/b};
+      const result=ops[math[2]]();
+      return Number.isFinite(result)?'Получается '+Number(result.toFixed(5))+'. Даже для тестового чата я умею немного считать.':'На ноль делить нельзя. Попробуем другой пример?';
+    }
+    if(/(^|\s)(привет|здравствуй|здравствуйте|добрый день|доброе утро|добрый вечер|хай)(\s|!|\.|,|$)/.test(t))
+      return next('greeting',['Привет! Давай проверим интерфейс в деле. Например, спроси, как свернуть панель или изменить прозрачность.','Привет! Я небольшой бот внутри прототипа. Можем обсудить сам интерфейс, его жесты и дальнейшую разработку.']);
+    if(/спасибо|благодарю|отлично|супер|круто|молодец/.test(t))
+      return next('greeting',['Рад помочь! Хочешь попробовать следующий сценарий — например, голосовой ввод?','Здорово! Можно продолжить разговор или свернуть панель, чтобы проверить полноэкранное чтение.']);
+    if(/пока|до свидания|до встречи/.test(t))
+      return next('greeting',['До встречи! Переписка в этой демонстрации исчезнет при перезагрузке страницы.','Пока! Возвращайся проверить новые анимации и сценарии.']);
+    if(/как дела|как настроение|как поживаешь/.test(t))
+      return next('greeting',['Работаю в демонстрационном режиме и готов отвечать. Как тебе ощущение от плавающих кнопок?','Отлично, насколько это возможно для локального скрипта :) Что сейчас интереснее проверить — жесты или сам диалог?']);
+    if(/кто ты|ты человек|как зовут|что ты такое/.test(t))
+      return next('about',['Я сценарный бот Floating Dock. Я не настоящая языковая модель: распознаю несколько тем и выбираю подходящие ответы. Зато работаю прямо в браузере.','Я демо-собеседник. Моя задача — показать, как ощущается диалог на фоне плавающего интерфейса, без сервера и подписок.']);
+    if(/что ты умеешь|что можешь|какие возможности|о чем поговорим/.test(t))
+      return next('about',['Могу объяснить сворачивание свайпом, темы, прозрачность, четыре раздела, голосовой ввод и варианты подключения настоящего ИИ. На незнакомую тему честно скажу, что это пока демо.','Понимаю вопросы об интерфейсе Floating Dock, немного считаю и удерживаю тему простых уточнений. Для свободного разговора потребуется подключение ИИ через сервер.']);
+    if(/настоящ(ий|его|им|ему|ая)\s+ии|искусственн|нейросет|chatgpt|gpt|api|llm|модель|умн(ый|ого)\s+чат/.test(t))
+      return next('ai',['Да. Можно подключить настоящую языковую модель: интерфейс отправляет сообщение на защищённый сервер, а тот обращается к API модели и возвращает ответ. Ключ API нельзя размещать в публичном HTML.','Для полноценного чата понадобятся серверная часть и доступ к модели. Тогда ответы станут свободными и контекстными; нынешний бот специально работает без подключения и расходов.']);
+    if(/голос|микрофон|диктов|распознав|транскрипц|говорить/.test(t))
+      return next('voice',['Нажми микрофон в плавающей строке. Если браузер поддерживает распознавание речи и дал доступ к микрофону, слова появятся в поле ввода. Затем их можно отправить.','Голосовой ввод зависит от браузера и разрешения на микрофон. В Android-приложении можно использовать системное распознавание речи более надёжно.']);
+    if(/сверн|спряч|убрать панел|свайп вправо|скрыть кнопк|схлоп|освободить экран/.test(t))
+      return next('swipe',['Проведи пальцем вправо по любому из двух нижних блоков — они свернутся в маленькую кнопку справа внизу. Текст под ними продолжит прокручиваться.','Чтобы убрать управление, сделай горизонтальный свайп вправо прямо по панелям. Они плавно соберутся в компактную иконку.']);
+    if(/разверн|раскр|вернуть панел|свайп влево|открыть кнопк/.test(t))
+      return next('swipe',['Нажми маленькую кнопку справа внизу или проведи по ней влево — обе панели раскроются с анимацией.','В свёрнутом виде остаётся компактная кнопка. Тап или свайп влево по ней возвращает строку ввода и навигацию.']);
+    if(/свайп|жест|смахн/.test(t))
+      return next('swipe',['Вправо по нижним блокам — свернуть. Влево по маленькой кнопке — развернуть. Вертикальная прокрутка страницы при этом работает отдельно.','Мы специально развели два типа движений: текст прокручивается вертикально, а плавающее управление меняет состояние горизонтальным жестом.']);
+    if(/темн|светл|тему|цвет|оформлен/.test(t))
+      return next('theme',['Открой «Настройки» и выбери светлую или тёмную тему. Переключение не меняет расположение кнопок, поэтому удобно сравнивать оба варианта.','В настройках две темы. Сравни их на длинном тексте: на светлом фоне особенно хорошо заметны прозрачность и тени.']);
+    if(/прозрач|стекл|размыт|матов|glass|blur/.test(t))
+      return next('glass',['В «Настройках» есть ползунок «Плотность стекла». Чем ниже значение, тем заметнее текст под кнопками, но тем сложнее сохранить контраст.','Суть эффекта — полупрозрачность плюс размытие фона. Попробуй изменить ползунок плотности стекла и прокрутить текст под панелью.']);
+    if(/карт|геолокац|офис|точк(и|а|у)|навигатор/.test(t))
+      return next('map',['Для карты особенно хорош отдельный полноэкранный режим: пусть она занимает всё пространство, а строка общения и навигация парят поверх. Такой эксперимент мы уже начали в прототипе Цифролаба.','Карту лучше освободить от рамок обычной страницы. В режиме фокуса остаётся сама карта, а управление можно свернуть одним жестом.']);
+    if(/главн|домой|профил|личн(ый|ого)\s+кабинет|навигац|четыре икон|раздел/.test(t))
+      return next('navigation',['Внизу четыре точки входа: «Домой», «Настройки», «Профиль» и «Чат». Они остаются на одном месте, когда ты меняешь разделы.','Постоянная нижняя навигация удобна для быстрых переходов. При этом она не обязана занимать фиксированное место: её можно свернуть.']);
+    if(/анимац|скорост|плавн|задержк|парени|движени/.test(t))
+      return next('animation',['У панелей короткая анимация сворачивания, а ответы бота приходят случайно через 0,3–3 секунды. Так можно оценить, как интерфейс воспринимается в движении.','Для ощущения «парения» важны тень, размытие и плавное изменение масштаба. Здесь мы можем отдельно экспериментировать со скоростью и траекторией.']);
+    if(/github|гитхаб|ссылк|публик|хостинг|apk|андроид|android|приложен/.test(t))
+      return next('development',['Сейчас это веб-прототип на GitHub Pages. Его удобно проверять с телефона по ссылке. Позже тот же интерфейс можно упаковать в Android-приложение.','Прототип работает в браузере. Для APK потребуется Android-проект и сборка; для настоящего ИИ — дополнительный сервер, чтобы не раскрывать API-ключ.']);
+    if(/как именно|подробнее|а почему|почему так|расскажи еще|объясни/.test(t)){
+      const more={
+        swipe:'Мы используем отдельный слой поверх страницы. Горизонтальный жест меняет состояние этого слоя, а прокрутка самого текста от него не зависит.',
+        glass:'Полупрозрачный фон смешивается с содержимым под панелью, а backdrop-filter размывает его. Так получается глубина без потери читаемости.',
+        map:'Когда карта занимает весь экран, на ней проще выбирать точки, двигать и увеличивать область. Парящая навигация не отбирает постоянную высоту.',
+        ai:'Ключевое отличие — свободная генерация ответов с учётом переписки. Для этого клиент обращается к серверу, а сервер безопасно вызывает модель по API.',
+        voice:'Распознавание речи — отдельный сервис браузера или Android. Оно превращает голос в текст; чат затем обрабатывает этот текст как обычное сообщение.',
+        animation:'Можно настроить easing, длительность, масштаб и тень. Именно согласованность этих деталей делает сворачивание похожим на единое движение.',
+        theme:'Обе темы используют одинаковую композицию. Отличаются фон, цвет текста и степень контраста элементов — удобно сравнивать читаемость.',
+        navigation:'Навигация должна быть предсказуемой: её позиции неизменны во всех разделах. Скрытие панели — дополнительный режим, а не переход на другую страницу.'
+      };
+      return more[lastTopic]||'Могу подробнее рассказать о жестах, прозрачности, навигации или подключении ИИ. Какую тему продолжим?';
+    }
+    if(/^\s*(да|согласен|давай|ок|хорошо|понятно)\s*[!.\s]*$/.test(t))
+      return next(lastTopic||'about',['Отлично. Тогда предлагаю проверить ещё один сценарий: напиши вопрос про интерфейс или сверни панели прямо во время диалога.','Продолжим! Можно попробовать голосовой ввод или спросить, как будет работать настоящий ИИ.']);
+    return next('unknown',[
+      'Понял твой вопрос. Пока я не умею свободно рассуждать на любую тему: это локальная имитация. Зато могу предметно обсудить жесты, темы, карту, навигацию и подключение ИИ.',
+      'Интересная тема, но у меня сейчас ограниченный набор сценариев. Если подключить настоящую модель, такой вопрос можно будет обсудить в полноценном контексте.',
+      'Чтобы не выдумывать ответ, скажу прямо: для этой темы нужна настоящая языковая модель. Пока можем проверить, насколько естественно работает сам чат.'
+    ]);
+  }
+  function scrollChatBottom(){
+    if(tab!=='chat')return;
+    requestAnimationFrame(()=>{scroller.scrollTop=scroller.scrollHeight;});
+  }
+  function renderChat(){if(tab==='chat'){render();scrollChatBottom();}}
+  function processReplies(){
+    if(botTyping||replyQueue.length===0)return;
+    botTyping=true;
+    const question=replyQueue.shift(),version=chatVersion;
+    renderChat();
+    const delay=300+Math.floor(Math.random()*2701);
+    setTimeout(()=>{
+      if(version!==chatVersion)return;
+      messages.push({role:'bot',text:botReply(question)});
+      botTyping=false;
+      if(tab==='chat')renderChat();
+      else{
+        unread++;
+        document.querySelector('.nav-item[data-tab="chat"]')?.classList.add('has-unread');
+      }
+      processReplies();
+    },delay);
+  }
+  function sendChat(text){
+    const cleaned=String(text||'').trim();
+    if(!cleaned)return;
+    messages.push({role:'user',text:cleaned});
+    replyQueue.push(cleaned);
+    unread=0;
+    tab='chat';
+    renderChat();
+    processReplies();
+  }
+  function clearChat(){
+    chatVersion++;
+    replyQueue.length=0;
+    botTyping=false;
+    lastTopic='';
+    unread=0;
+    messages.length=0;
+    messages.push({role:'bot',text:welcome});
+    renderChat();
+    notify('Диалог очищен');
+  }
   function escapeHtml(s){return s.replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
-  function render(){page.innerHTML=({home,settings,profile,chat}[tab])();document.querySelectorAll('.nav-item').forEach(b=>{b.classList.toggle('active',b.dataset.tab===tab);b.setAttribute('aria-current',b.dataset.tab===tab?'page':'false')});if(tab==='settings'){const isDark=document.documentElement.dataset.theme==='dark';document.getElementById('darkBtn').classList.toggle('chosen',isDark);document.getElementById('lightBtn').classList.toggle('chosen',!isDark)}}
+  function render(){page.innerHTML=({home,settings,profile,chat}[tab])();document.querySelectorAll('.nav-item').forEach(b=>{b.classList.toggle('active',b.dataset.tab===tab);b.classList.toggle('has-unread',b.dataset.tab==='chat'&&unread>0);b.setAttribute('aria-current',b.dataset.tab===tab?'page':'false')});if(tab==='settings'){const isDark=document.documentElement.dataset.theme==='dark';document.getElementById('darkBtn').classList.toggle('chosen',isDark);document.getElementById('lightBtn').classList.toggle('chosen',!isDark)}}
   function notify(s){clearTimeout(toastTimeout);toastEl.textContent=s;toastEl.classList.add('show');toastTimeout=setTimeout(()=>toastEl.classList.remove('show'),2600)}
   function collapse(){if(shell.classList.contains('is-collapsed'))return;document.activeElement?.blur?.();shell.classList.add('is-collapsed');mini.setAttribute('aria-expanded','false')}
   function expand(){if(!shell.classList.contains('is-collapsed'))return;shell.classList.remove('is-collapsed');mini.setAttribute('aria-expanded','true')}
@@ -184,10 +332,10 @@ input[type=range]{max-width:125px;accent-color:var(--accent)}
   expanded.addEventListener('pointerdown',touchStart);expanded.addEventListener('pointerup',e=>touchEnd(e,'collapse'));expanded.addEventListener('pointercancel',()=>gesture=null);
   mini.addEventListener('pointerdown',touchStart);mini.addEventListener('pointerup',e=>touchEnd(e,'expand'));mini.addEventListener('pointercancel',()=>gesture=null);
   mini.addEventListener('click',expand);
-  document.getElementById('nav').addEventListener('click',e=>{let b=e.target.closest('[data-tab]');if(!b)return;tab=b.dataset.tab;render();scroller.scrollTop=0;});
-  page.addEventListener('click',e=>{const el=e.target.closest('#darkBtn,#lightBtn');if(!el)return;document.documentElement.dataset.theme=el.id==='darkBtn'?'dark':'light';render();});
+  document.getElementById('nav').addEventListener('click',e=>{let b=e.target.closest('[data-tab]');if(!b)return;tab=b.dataset.tab;if(tab==='chat')unread=0;render();if(tab==='chat')scrollChatBottom();else scroller.scrollTop=0;});
+  page.addEventListener('click',e=>{const prompt=e.target.closest('[data-prompt]');if(prompt){sendChat(prompt.dataset.prompt);return;}if(e.target.closest('#clearChat')){clearChat();return;}const el=e.target.closest('#darkBtn,#lightBtn');if(!el)return;document.documentElement.dataset.theme=el.id==='darkBtn'?'dark':'light';render();});
   page.addEventListener('input',e=>{if(e.target.id==='glassRange'){glassOpacity=Number(e.target.value)/100;document.documentElement.style.setProperty('--glass-a',String(glassOpacity))}});
-  document.getElementById('composer').addEventListener('submit',e=>{e.preventDefault();const t=message.value.trim();if(!t){notify('Напишите сообщение или нажмите на микрофон');return;}messages.push(t);message.value='';message.blur();tab='chat';render();scroller.scrollTop=0;notify('Сообщение добавлено в чат')});
+  document.getElementById('composer').addEventListener('submit',e=>{e.preventDefault();const t=message.value.trim();if(!t){notify('Напишите сообщение или нажмите на микрофон');return;}message.value='';message.blur();sendChat(t)});
   function speechError(msg){notify(msg||'Голосовой ввод недоступен на этом устройстве');}
   window.receiveTranscription=function(text){if(typeof text==='string'&&text){message.value=(message.value?message.value+' ':'')+text;expand();notify('Речь преобразована в текст');}else{speechError('Речь не распознана');}}
   window.receiveSpeechError=speechError;
