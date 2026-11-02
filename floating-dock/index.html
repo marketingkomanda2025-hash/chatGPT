@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no" />
+<meta name="theme-color" content="#0b1020" />
+<title>Floating Dock — visual lab</title>
+<style>
+:root { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; }
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden}
+html[data-theme="dark"]{
+ color-scheme:dark;
+ --bg:#0b1020;--ink:#eef2ff;--sub:#a6b1cc;--faint:#73809e;
+ --accent:#a5abff;--accent2:#7ec9ee;
+ --thin:rgba(207,220,255,.11);--card:rgba(220,231,255,.045);
+ --glass-rgb:25,36,59;--glass-a:.79;--glass-border:rgba(229,239,255,.16);
+ --nav-selected:rgba(159,171,255,.18);--item-hover:rgba(180,195,255,.08);
+ --toast-bg:rgba(31,43,67,.95);--shadow:0 16px 55px rgba(0,0,0,.42),0 4px 16px rgba(0,0,0,.19);
+}
+html[data-theme="light"]{
+ color-scheme:light;
+ --bg:#f1f4fa;--ink:#1c2945;--sub:#596883;--faint:#8190a8;
+ --accent:#5567db;--accent2:#3396ba;
+ --thin:rgba(23,39,78,.095);--card:rgba(255,255,255,.5);
+ --glass-rgb:255,255,255;--glass-a:.79;--glass-border:rgba(255,255,255,.9);
+ --nav-selected:rgba(91,108,221,.115);--item-hover:rgba(75,91,156,.06);
+ --toast-bg:rgba(255,255,255,.97);--shadow:0 16px 48px rgba(46,64,119,.16),0 3px 12px rgba(46,64,119,.09);
+}
+body{background:var(--bg);color:var(--ink);-webkit-tap-highlight-color:transparent;transition:background .4s,color .3s}
+button,input{font:inherit}
+button{cursor:pointer;-webkit-tap-highlight-color:transparent}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent2);outline-offset:3px}
+.shell{position:relative;height:100%;height:100dvh;width:100%;overflow:hidden;isolation:isolate}
+.aurora{position:absolute;inset:0;pointer-events:none;z-index:-1;overflow:hidden}
+.aurora:before{content:"";position:absolute;top:-200px;right:-160px;width:530px;height:630px;border-radius:50%;background:radial-gradient(closest-side,rgba(101,93,218,.19),transparent);filter:blur(10px)}
+.aurora:after{content:"";position:absolute;left:-235px;top:400px;width:500px;height:570px;border-radius:50%;background:radial-gradient(closest-side,rgba(39,141,183,.11),transparent)}
+html[data-theme="light"] .aurora:before{background:radial-gradient(closest-side,rgba(132,149,255,.2),transparent)}
+html[data-theme="light"] .aurora:after{background:radial-gradient(closest-side,rgba(83,178,224,.17),transparent)}
+.scroll{height:100%;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.scroll::-webkit-scrollbar{display:none}
+.page{width:min(100%,700px);margin:0 auto;padding:30px 28px 190px}
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:63px;color:var(--sub);font-size:10px;letter-spacing:.19em;font-weight:700}
+.topbar .wordmark{display:flex;gap:10px;align-items:center}
+.mark{width:24px;height:24px;display:grid;place-items:center;color:var(--bg);border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent2));font-weight:900;font-size:13px;letter-spacing:0}
+.serial{color:var(--faint);letter-spacing:.11em;font-weight:600}
+.eyebrow{display:flex;align-items:center;gap:10px;color:var(--accent2);font-weight:700;letter-spacing:.16em;text-transform:uppercase;font-size:10px;margin-bottom:16px}
+.eyebrow:before{content:"";display:inline-block;width:19px;height:1px;background:currentColor}
+h1{font-size:clamp(39px,10vw,67px);line-height:1.015;letter-spacing:-.057em;font-weight:650;margin:0 0 23px;max-width:580px}
+h1 em{font-style:normal;color:var(--accent)}
+.lead{font-size:17px;line-height:1.67;color:var(--sub);letter-spacing:-.012em;margin:0 0 27px}
+.hero-stat{display:flex;align-items:center;gap:11px;color:var(--faint);font-size:11px;letter-spacing:.04em;margin-bottom:54px}
+.hero-stat .tiny-orb{width:9px;height:9px;border-radius:50%;background:var(--accent2);box-shadow:0 0 0 5px rgba(98,184,223,.10)}
+.section-divider{height:1px;background:var(--thin);margin:0 0 35px}
+.section-no{font-size:12px;letter-spacing:.1em;color:var(--accent);font-weight:700;margin-bottom:15px}
+h2{font-size:clamp(25px,6.7vw,34px);letter-spacing:-.04em;line-height:1.2;font-weight:600;margin:0 0 14px}
+p{font-size:15px;line-height:1.79;color:var(--sub);margin:0 0 19px}
+.story{margin:0 0 56px}
+.quote{position:relative;margin:31px 0 36px;padding:24px 23px;border:1px solid var(--thin);border-radius:22px;background:var(--card);font-size:18px;line-height:1.55;letter-spacing:-.025em;color:var(--ink)}
+.quote small{display:block;margin-top:13px;letter-spacing:.08em;font-size:10px;font-weight:700;color:var(--faint)}
+.inline-tags{display:flex;flex-wrap:wrap;gap:8px;margin:20px 0 28px}
+.tag{border:1px solid var(--thin);color:var(--sub);font-size:11px;padding:9px 12px;border-radius:100px}
+.footer-note{color:var(--faint);font-size:12px;margin:0 0 12px}
+.glass{background:rgba(var(--glass-rgb),var(--glass-a));border:1px solid var(--glass-border);backdrop-filter:blur(26px) saturate(155%);-webkit-backdrop-filter:blur(26px) saturate(155%);box-shadow:var(--shadow)}
+.dock-zone{position:absolute;z-index:10;bottom:20px;left:0;right:0;pointer-events:none;display:flex;justify-content:center;padding:0 19px;}
+.dock-expanded{width:min(100%,420px);display:flex;flex-direction:column;gap:10px;transform-origin:90% 90%;transition:opacity .34s ease,transform .48s cubic-bezier(.22,.8,.18,1),filter .38s;pointer-events:auto;touch-action:pan-y}
+.composer{display:flex;align-items:center;gap:7px;border-radius:21px;height:60px;padding:6px 7px 6px 19px}
+.composer input{min-width:0;flex:1;border:0;outline:none;background:transparent;color:var(--ink);font-size:13px;letter-spacing:-.01em}
+.composer input::placeholder{color:var(--sub);opacity:.94}
+.icon-btn{border:0;display:grid;place-items:center;flex-shrink:0;border-radius:14px;background:transparent;color:var(--sub);height:42px;width:42px;transition:background .22s,color .22s,transform .22s}
+.icon-btn:active{transform:scale(.9)}
+.icon-btn:hover{background:var(--item-hover);color:var(--ink)}
+.icon-btn svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.send{background:linear-gradient(135deg,#b7b6ff,#80c4e9);color:#17203c;height:42px;width:42px}
+.send:hover{background:linear-gradient(135deg,#c1c1ff,#9ad4f4);color:#17203c}
+.send svg{width:18px;height:18px}
+.nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;align-items:center;height:77px;padding:7px;border-radius:24px}
+.nav-item{position:relative;border:0;background:transparent;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:5px;height:61px;border-radius:18px;color:var(--faint);transition:color .28s,background .28s,transform .2s}
+.nav-item svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round}
+.nav-item span{font-size:10px;letter-spacing:.012em;font-weight:550}
+.nav-item.active{background:var(--nav-selected);color:var(--ink)}
+.nav-item.active svg{color:var(--accent)}
+.nav-item:active{transform:scale(.95)}
+.mini{position:absolute;right:22px;bottom:1px;display:flex;align-items:center;justify-content:center;width:53px;height:53px;padding:0;border-radius:19px;pointer-events:none;opacity:0;transform:scale(.55) translateX(28px) rotate(-15deg);transition:opacity .25s,transform .46s cubic-bezier(.2,1.5,.32,1)}
+.mini svg{width:24px;height:24px;stroke:var(--ink);fill:none;stroke-width:1.55;stroke-linecap:round;stroke-linejoin:round}
+.mini .glow-dot{position:absolute;width:8px;height:8px;background:var(--accent2);border-radius:50%;right:8px;top:8px;box-shadow:0 0 14px var(--accent2)}
+.shell.is-collapsed .dock-expanded{opacity:0;filter:blur(9px);transform:translateX(70px) scale(.82);pointer-events:none}
+.shell.is-collapsed .mini{opacity:1;pointer-events:auto;transform:scale(1) translateX(0) rotate(0)}
+.swipe-tip{position:absolute;bottom:179px;left:0;right:0;display:flex;justify-content:center;pointer-events:none;color:var(--faint);font-size:10px;letter-spacing:.06em;opacity:.9;transition:opacity .25s}
+.shell.is-collapsed .swipe-tip{opacity:0}
+.swipe-tip svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.8;vertical-align:-2px;margin-left:4px}
+.toast{position:absolute;left:50%;bottom:198px;transform:translate(-50%,15px);background:var(--toast-bg);border:1px solid var(--glass-border);box-shadow:var(--shadow);border-radius:13px;padding:11px 15px;color:var(--ink);font-size:12px;z-index:50;opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;white-space:nowrap;max-width:90vw;overflow:hidden;text-overflow:ellipsis}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.settings-panel{display:flex;flex-direction:column;gap:18px;margin:24px 0 36px}
+.settings-row{display:flex;align-items:center;justify-content:space-between;padding:18px 19px;gap:10px;border-radius:20px;border:1px solid var(--thin);background:var(--card)}
+.settings-name{color:var(--ink);font-weight:600;font-size:14px;margin-bottom:4px}
+.settings-desc{color:var(--faint);font-size:11px;line-height:1.5}
+.theme-toggle{display:flex;gap:4px;border:1px solid var(--thin);border-radius:12px;padding:3px}
+.theme-toggle button{border:0;background:transparent;border-radius:9px;padding:8px 10px;font-size:11px;color:var(--sub)}
+.theme-toggle button.chosen{background:var(--nav-selected);color:var(--ink)}
+input[type=range]{max-width:125px;accent-color:var(--accent)}
+.demo-avatar{height:60px;width:60px;display:grid;place-items:center;color:#152044;background:linear-gradient(135deg,#a8baff,#8bcce6);border-radius:19px;font-size:21px;font-weight:700;margin-bottom:23px}
+.chat-bubble{margin-bottom:12px;padding:16px 17px;max-width:90%;border-radius:19px 19px 19px 5px;background:var(--card);border:1px solid var(--thin);font-size:14px;line-height:1.6;color:var(--sub);overflow-wrap:anywhere}
+.chat-bubble.mine{border-radius:19px 19px 5px 19px;background:var(--nav-selected);margin-left:auto;color:var(--ink)}
+@media (min-width:700px){.page{padding:46px 38px 220px}.dock-zone{bottom:25px}.swipe-tip{bottom:185px}}
+@media (max-height:550px){.swipe-tip{display:none}.dock-zone{bottom:8px}.nav{height:61px}.nav-item{height:48px;gap:1px}.composer{height:51px}.dock-expanded{gap:7px}.toast{bottom:139px}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<div class="shell" id="shell">
+  <div class="aurora" aria-hidden="true"></div>
+  <main class="scroll" id="scroll"><div class="page" id="page"></div></main>
+  <div class="swipe-tip" id="swipeTip">Свайп вправо — свернуть панель <svg viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></div>
+  <div class="dock-zone">
+    <div class="dock-expanded" id="expanded">
+      <form class="composer glass" id="composer" autocomplete="off">
+        <input id="message" aria-label="Сообщение" placeholder="Написать или продиктовать…" maxlength="1000" />
+        <button class="icon-btn" type="button" id="mic" aria-label="Голосовой ввод" title="Голосовой ввод">
+          <svg viewBox="0 0 24 24"><rect x="9" y="2.7" width="6" height="12" rx="3"/><path d="M5.5 10.5a6.5 6.5 0 0 0 13 0M12 17v4m-4 0h8"/></svg>
+        </button>
+        <button class="icon-btn send" type="submit" aria-label="Отправить сообщение" title="Отправить">
+          <svg viewBox="0 0 24 24"><path d="m4 12 15-8-3.2 16-4.1-6.3L4 12Z"/><path d="m11.7 13.7 7.3-9.7"/></svg>
+        </button>
+      </form>
+      <nav class="nav glass" id="nav" aria-label="Главное меню">
+        <button class="nav-item active" data-tab="home" aria-label="Домой" type="button"><svg viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M9 21v-8h6v8"/></svg><span>Домой</span></button>
+        <button class="nav-item" data-tab="settings" aria-label="Настройки" type="button"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="2.5"/><circle cx="16" cy="17" r="2.5"/></svg><span>Настройки</span></button>
+        <button class="nav-item" data-tab="profile" aria-label="Личный кабинет" type="button"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4.5 21c.6-4 3.2-6 7.5-6s6.9 2 7.5 6"/></svg><span>Профиль</span></button>
+        <button class="nav-item" data-tab="chat" aria-label="Чат" type="button"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5 9 9 0 0 1-3.6-.8L3 21l1.8-5.2a8.5 8.5 0 1 1 16.2-4.3Z"/><path d="M8 11.5h8M8 15h5"/></svg><span>Чат</span></button>
+      </nav>
+    </div>
+    <button class="mini glass" id="mini" aria-label="Развернуть панель" title="Развернуть панель" type="button"><span class="glow-dot"></span><svg viewBox="0 0 24 24"><path d="M16 7 9 12l7 5M11 7l-7 5 7 5"/></svg></button>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</div>
+<script>
+(()=>{
+  'use strict';
+  const page=document.getElementById('page');
+  const shell=document.getElementById('shell');
+  const scroller=document.getElementById('scroll');
+  const mini=document.getElementById('mini');
+  const expanded=document.getElementById('expanded');
+  const message=document.getElementById('message');
+  const toastEl=document.getElementById('toast');
+  const mic=document.getElementById('mic');
+  let tab='home';let toastTimeout;let glassOpacity=.79;const messages=[];
+  const header=()=>`<div class="topbar"><div class="wordmark"><span class="mark">F</span><span>FLOAT / LAB</span></div><span class="serial">VISUAL PROTOTYPE — 01</span></div>`;
+  const section=(n,title,first,second)=>`<section class="story"><div class="section-divider"></div><div class="section-no">${n}</div><h2>${title}</h2><p>${first}</p><p>${second}</p></section>`;
+  function home(){return header()+`
+    <div class="eyebrow">Эксперимент с интерфейсом</div>
+    <h1>Контент.<br><em>Без помех.</em></h1>
+    <p class="lead">Плавающая панель для общения и навигации. Она всегда под рукой, но уступает место содержимому, когда нужно сосредоточиться на чтении.</p>
+    <div class="hero-stat"><span class="tiny-orb"></span> ДВА ПЛАВАЮЩИХ БЛОКА · ОДИН ЖЕСТ</div>
+    <div class="quote">«Хороший интерфейс знает, когда нужно быть заметным, а когда — исчезнуть».<small>ПРИНЦИП ДИЗАЙНА</small></div>
+    ${section('01 / ИДЕЯ','Панель поверх страницы','Обычная навигация занимает постоянное место на экране. Здесь она размещается поверх основного материала: текст продолжает свободно перемещаться под полупрозрачными элементами.','Эффект матового стекла сохраняет ощущение глубины. Подвижный текст виден сквозь стеклянную поверхность, а содержимое кнопок остаётся читаемым.')}
+    ${section('02 / УПРАВЛЕНИЕ','Один свайп — два состояния','Проведите вправо непосредственно по нижней панели. Строка ввода и четыре значка навигации объединятся в компактную кнопку у правого края экрана.','Чтобы вернуть интерфейс, проведите по маленькой кнопке влево или просто нажмите на неё. Переход между состояниями происходит с мягкой анимацией.')}
+    <div class="inline-tags"><span class="tag">Плавное сворачивание</span><span class="tag">Стеклянная поверхность</span><span class="tag">Контент под панелью</span></div>
+    ${section('03 / КОММУНИКАЦИЯ','Говорить или печатать','Верхний блок содержит текстовое поле. Введите сообщение, нажмите отправку, и оно появится в разделе «Чат». В Android значок микрофона запускает системное распознавание речи и переносит результат в поле ввода.','Панель не пытается решать все задачи сразу. Её роль — обеспечить быстрый доступ к контакту с приложением, не отвлекая от основной страницы.')}
+    ${section('04 / НАВИГАЦИЯ','Четыре точки входа','Ниже расположены четыре кнопки: главный экран, настройки, личный кабинет и чат. Каждая открывает собственный раздел, а плавающий блок остаётся на своём месте.','В настройках можно сравнить светлый и тёмный режимы, а также увеличить или уменьшить прозрачность плавающих блоков.')}
+    ${section('05 / ВОСПРИЯТИЕ','Сначала содержание','Этот длинный материал специально нужен для проверки прокрутки. Пролистайте страницу дальше и обратите внимание, как заголовки и абзацы проходят под полупрозрачной панелью.','Попробуйте свернуть элементы, продолжить чтение и затем вернуть их. Важно почувствовать, не мешает ли панель, насколько удобно находить её в свёрнутом виде и хватает ли места для текста.')}
+    ${section('06 / СЛЕДУЮЩИЙ ШАГ','От макета к продукту','Когда будет понятна механика, можно менять форму элементов, уровень размытия, длительность движения, расстояния и типографику. Техническая основа уже позволяет быстро проводить подобные эксперименты.','Главная цель первой версии — не готовый продукт, а понятный интерактивный опыт. Проверяем ощущение свободы, выразительность анимации и доступность управления одной рукой.')}
+    <p class="footer-note">Конец демонстрационного текста · FLOAT / LAB</p>`;}
+  function settings(){return header()+`<div class="eyebrow">Персонализация</div><h1>Настроить<br><em>ощущение.</em></h1><p class="lead">Сравните два оформления и степень прозрачности. Панель остаётся поверх содержимого в обоих режимах.</p>
+    <div class="settings-panel"><div class="settings-row"><div><div class="settings-name">Тема интерфейса</div><div class="settings-desc">Тёмная или светлая подложка</div></div><div class="theme-toggle"><button type="button" id="darkBtn">Тёмная</button><button type="button" id="lightBtn">Светлая</button></div></div>
+    <div class="settings-row"><div><div class="settings-name">Плотность стекла</div><div class="settings-desc">Прозрачность плавающих блоков</div></div><input aria-label="Плотность стекла" id="glassRange" type="range" min="35" max="95" step="1" value="${Math.round(glassOpacity*100)}"/></div></div>
+    ${section('01 / ПРОВЕРКА','Наблюдать в движении','Измените настройки, вернитесь на главный экран и пролистайте материал. Чем ниже плотность стекла, тем отчётливее виден текст под панелью.','При высокой плотности кнопки становятся контрастнее, но ощущение парения может быть менее выраженным. Хороший баланс зависит от фонового содержимого.')}
+    ${section('02 / ЭКСПЕРИМЕНТ','Тестируйте жесты','Сверните панель свайпом вправо и разверните её движением влево. Чтобы сравнить читаемость, сделайте то же в светлом режиме.','На следующем этапе можно отдельно подбирать радиус скругления, размеры плавающих блоков и скорость анимации.')}`;}
+  function profile(){return header()+`<div class="demo-avatar">F</div><div class="eyebrow">Личный кабинет</div><h1>Ваше<br><em>пространство.</em></h1><p class="lead">Демонстрационный раздел без регистрации. Он нужен, чтобы проверить, что плавающая навигация остаётся доступной при переходах.</p>
+    <div class="inline-tags"><span class="tag">Демо-профиль</span><span class="tag">Локальные данные</span><span class="tag">Без сервера</span></div>
+    ${section('01 / ВИЗУАЛ','Единое поведение','Независимо от экрана строка общения и навигация остаются на одинаковом месте. Привычный жест одинаково работает во всех разделах.','Такой подход даёт ощущение постоянной точки управления, но не забирает ценную площадь у контента.')}
+    ${section('02 / ВОЗМОЖНОСТИ','Можно развивать','В реальном продукте личный кабинет может содержать сведения пользователя, его документы, настройки и историю действий.','Пока здесь только текст, необходимый для проверки визуальных состояний и прокрутки под закреплённой панелью.')}`;}
+  function chat(){return header()+`<div class="eyebrow">Коммуникация</div><h1>Диалог<br><em>на ходу.</em></h1><p class="lead">Печатайте сообщение в плавающей строке снизу. Текст появится здесь — это локальная демонстрация, без отправки на сервер.</p><div class="chat-bubble">Привет! Я демонстрационный чат. Напишите или продиктуйте сообщение в нижнем поле, чтобы проверить поведение плавающей строки.</div><div id="chatMessages">${messages.map(text=>`<div class="chat-bubble mine">${escapeHtml(text)}</div>`).join('')}</div><div class="quote">Нижняя панель остаётся доступной даже во время прокрутки диалога.<small>FLOAT / LAB · CHAT</small></div>
+    ${section('01 / СЦЕНАРИЙ','Общение без перехода','Строка ввода доступна на любом экране. Отправленные сообщения можно увидеть в этом разделе. Микрофон на Android использует системный голосовой ввод.','В будущем здесь могут появиться ответы ассистента, история разговоров и более богатые сценарии. Для первого прототипа это не требуется.')}`;}
+  function escapeHtml(s){return s.replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
+  function render(){page.innerHTML=({home,settings,profile,chat}[tab])();document.querySelectorAll('.nav-item').forEach(b=>{b.classList.toggle('active',b.dataset.tab===tab);b.setAttribute('aria-current',b.dataset.tab===tab?'page':'false')});if(tab==='settings'){const isDark=document.documentElement.dataset.theme==='dark';document.getElementById('darkBtn').classList.toggle('chosen',isDark);document.getElementById('lightBtn').classList.toggle('chosen',!isDark)}}
+  function notify(s){clearTimeout(toastTimeout);toastEl.textContent=s;toastEl.classList.add('show');toastTimeout=setTimeout(()=>toastEl.classList.remove('show'),2600)}
+  function collapse(){if(shell.classList.contains('is-collapsed'))return;document.activeElement?.blur?.();shell.classList.add('is-collapsed');mini.setAttribute('aria-expanded','false')}
+  function expand(){if(!shell.classList.contains('is-collapsed'))return;shell.classList.remove('is-collapsed');mini.setAttribute('aria-expanded','true')}
+  let gesture=null;
+  function touchStart(e){if(e.pointerType==='mouse'&&e.button!==0)return;gesture={id:e.pointerId,x:e.clientX,y:e.clientY};}
+  function touchEnd(e,action){if(!gesture||gesture.id!==e.pointerId)return;const dx=e.clientX-gesture.x;const dy=e.clientY-gesture.y;gesture=null;if(Math.abs(dx)>42&&Math.abs(dx)>Math.abs(dy)*1.2){if(action==='collapse'&&dx>0)collapse();if(action==='expand'&&dx<0)expand();}}
+  expanded.addEventListener('pointerdown',touchStart);expanded.addEventListener('pointerup',e=>touchEnd(e,'collapse'));expanded.addEventListener('pointercancel',()=>gesture=null);
+  mini.addEventListener('pointerdown',touchStart);mini.addEventListener('pointerup',e=>touchEnd(e,'expand'));mini.addEventListener('pointercancel',()=>gesture=null);
+  mini.addEventListener('click',expand);
+  document.getElementById('nav').addEventListener('click',e=>{let b=e.target.closest('[data-tab]');if(!b)return;tab=b.dataset.tab;render();scroller.scrollTop=0;});
+  page.addEventListener('click',e=>{const el=e.target.closest('#darkBtn,#lightBtn');if(!el)return;document.documentElement.dataset.theme=el.id==='darkBtn'?'dark':'light';render();});
+  page.addEventListener('input',e=>{if(e.target.id==='glassRange'){glassOpacity=Number(e.target.value)/100;document.documentElement.style.setProperty('--glass-a',String(glassOpacity))}});
+  document.getElementById('composer').addEventListener('submit',e=>{e.preventDefault();const t=message.value.trim();if(!t){notify('Напишите сообщение или нажмите на микрофон');return;}messages.push(t);message.value='';message.blur();tab='chat';render();scroller.scrollTop=0;notify('Сообщение добавлено в чат')});
+  function speechError(msg){notify(msg||'Голосовой ввод недоступен на этом устройстве');}
+  window.receiveTranscription=function(text){if(typeof text==='string'&&text){message.value=(message.value?message.value+' ':'')+text;expand();notify('Речь преобразована в текст');}else{speechError('Речь не распознана');}}
+  window.receiveSpeechError=speechError;
+  mic.addEventListener('click',()=>{
+    if(window.AndroidBridge&&typeof window.AndroidBridge.startSpeechRecognition==='function'){window.AndroidBridge.startSpeechRecognition();return;}
+    const API=window.SpeechRecognition||window.webkitSpeechRecognition;
+    if(!API){speechError('На Android кнопка откроет системный голосовой ввод');return;}
+    try{let recog=new API();recog.lang='ru-RU';recog.maxAlternatives=1;recog.interimResults=false;recog.onresult=e=>window.receiveTranscription(e.results[0][0].transcript);recog.onerror=e=>speechError('Голосовой ввод: '+e.error);recog.start();notify('Слушаю…');}catch(e){speechError('Нет доступа к микрофону')}});
+  render();
+})();
+</script>
+</body>
+</html>
