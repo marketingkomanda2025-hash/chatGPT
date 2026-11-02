@@ -27,10 +27,17 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-      - name: Install platform SDK
-        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      - name: Check Android SDK
+        run: |
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          ls "$ANDROID_HOME/platforms"
+          ls "$ANDROID_HOME/build-tools"
+          if [ ! -d "$ANDROID_HOME/platforms/android-35" ]; then
+            sdkmanager "platforms;android-35"
+          fi
+          if [ ! -d "$ANDROID_HOME/build-tools/35.0.0" ]; then
+            sdkmanager "build-tools;35.0.0"
+          fi
       - name: Assemble Debug APK
         working-directory: floating-dock-android
         run: gradle --no-daemon assembleDebug
