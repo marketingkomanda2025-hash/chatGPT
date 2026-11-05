@@ -1,6 +1,13 @@
 package com.floatingdock.visual;
 
 import android.app.Activity;
+import android.Manifest;
+import android.app.AlarmManager;
+import android.app.PendingIntent;
+import android.content.Context;
+import android.content.pm.PackageManager;
+import android.os.Build;
+import android.os.SystemClock;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.graphics.Color;
@@ -31,6 +38,10 @@ public final class MainActivity extends Activity {
 
     private WebView webView;
     private static final int SPEECH_REQUEST = 7421;
+    private static final int NOTIFICATION_PERMISSION_REQUEST = 7422;
+    public static final String EXTRA_OPEN_HRYUNDEL = "com.floatingdock.visual.OPEN_HRYUNDEL";
+    private static final long PUSH_DELAY_MILLIS = 20_000L;
+    private boolean pendingNotification = false;
 
     @Override
     protected void onCreate(Bundle state) {
@@ -55,7 +66,7 @@ public final class MainActivity extends Activity {
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
 
         // JavaScript is only trusted for the dedicated published prototype URL.
-        webView.addJavascriptInterface(new SpeechBridge(), "AndroidBridge");
+        webView.addJavascriptInterface(new AndroidBridge(), "AndroidBridge");
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
@@ -66,7 +77,8 @@ public final class MainActivity extends Activity {
         });
         setContentView(webView, new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-        webView.loadUrl(HOME_URL);
+        webView.loadUrl(HOME_URL + (getIntent() != null &&
+                getIntent().getBooleanExtra(EXTRA_OPEN_HRYUNDEL, false) ? "?tab=chat" : ""));
     }
 
     @Override
@@ -85,7 +97,58 @@ public final class MainActivity extends Activity {
         }
     }
 
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        if (intent != null && intent.getBooleanExtra(EXTRA_OPEN_HRYUNDEL, false)) {
+            if (webView != null && isTrusted(webView.getUrl())) {
+                webView.evaluateJavascript("window.openHryundelChat && window.openHryundelChat();", null);
+            } else if (webView != null) {
+                webView.loadUrl(HOME_URL + "?tab=chat");
+            }
+        }
+    }
+
+    private void requestTestNotification() {
+        if (Build.VERSION.SDK_INT >= 33 &&
+                checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            pendingNotification = true;
+            requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS},
+                    NOTIFICATION_PERMISSION_REQUEST);
+            return;
+        }
+        scheduleTestNotification();
+    }
+
+    private void scheduleTestNotification() {
+        Intent intent = new Intent(this, HryundelNotificationReceiver.class);
+        PendingIntent pending = PendingIntent.getBroadcast(
+                this, 7401, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        AlarmManager alarm = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+        if (alarm == null) {
+            callWeb("receiveNotificationStatus", "Не удалось запланировать уведомление");
+            return;
+        }
+        alarm.setAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP,
+                SystemClock.elapsedRealtime() + PUSH_DELAY_MILLIS, pending);
+        callWeb("receiveNotificationStatus", "Хрюндель напишет примерно через 20 секунд. Можно свернуть приложение!");
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
+        super.onRequestPermissionsResult(requestCode, permissions, results);
+        if (requestCode != NOTIFICATION_PERMISSION_REQUEST || !pendingNotification) return;
+        pendingNotification = false;
+        if (results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED) {
+            scheduleTestNotification();
+        } else {
+            callWeb("receiveNotificationStatus", "Разреши уведомления для Floating Dock в настройках Android");
+        }
+    }
+
     private boolean isTrusted(String uriString) {
+        if (uriString == null) return false;
         android.net.Uri uri = android.net.Uri.parse(uriString);
         String path = uri.getPath();
         return "https".equalsIgnoreCase(uri.getScheme())
@@ -103,7 +166,14 @@ public final class MainActivity extends Activity {
         if (webView != null) callWeb("receiveSpeechError", message);
     }
 
-    private final class SpeechBridge {
+    private final class AndroidBridge {
+        @JavascriptInterface
+        public void scheduleHryundelNotification() {
+            runOnUiThread(() -> {
+                if (webView != null && isTrusted(webView.getUrl())) requestTestNotification();
+            });
+        }
+
         @JavascriptInterface
         public void startSpeechRecognition() {
             runOnUiThread(() -> {

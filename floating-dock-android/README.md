@@ -31,3 +31,21 @@ The application loads the remote GitHub Pages UI and therefore needs internet.
 The conversational bot on this page is simulated, not an external AI API.
 This is an experimental build, not ready for store publication. The app's
 WebView JavaScript bridge is constrained to the specific trusted prototype URL.
+
+## Hryundel test notifications (0.2)
+
+The web chat displays the button **🐽 Пуш через 20 секунд**.
+On an Android device, tap it, grant the notification permission on
+Android 13+, and leave the app. Android's inexact alarm schedules one
+local notification in approximately 20 seconds (the operating system
+may delay it in battery saving / idle modes). Tapping the notification
+opens the Hryundel chat.
+
+- Uses `POST_NOTIFICATIONS` runtime permission on Android 13+.
+- Uses `AlarmManager.setAndAllowWhileIdle` without requesting exact alarms.
+- The receiver is private (`android:exported="false"`).
+- No Firebase, push server, tracking, or recurring notifications.
+- This is a test-only version; remote push requires a separate backend.
+- The new debug APK may have a different signing key from the old build.
+  If Android refuses an in-place update, uninstall Floating Dock 0.1
+  before installing 0.2. Clearing the app loses its local data.
