@@ -38,6 +38,6 @@ jobs:
               --repo "${{ github.repository }}" \
               --target "${{ github.sha }}" \
               --title "Floating Dock 0.2 — Хрюндель local notifications" \
-              --notes "Experimental Android WebView app with local Hryundel notifications. Tap "🐽 Пуш через 20 секунд" in the chat, grant permission, then leave the app. This is a DEBUG-signed test build; if the installer reports a signature mismatch, uninstall the previous Floating Dock before installing version 0.2. Delivery can be delayed by Android power management." \
+              --notes "Experimental Android WebView app with local Hryundel notifications. Tap the pig-notification test button in the chat, grant permission, then leave the app. This is a DEBUG-signed test build; if the installer reports a signature mismatch, uninstall the previous Floating Dock before installing version 0.2. Delivery can be delayed by Android power management." \
               --prerelease
           fi
