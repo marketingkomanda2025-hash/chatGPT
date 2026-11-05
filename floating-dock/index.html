@@ -125,6 +125,11 @@ input[type=range]{max-width:125px;accent-color:var(--accent)}
 .chat-prompt{flex:0 0 auto;scroll-snap-align:start;background:var(--nav-selected);color:var(--ink);border:1px solid var(--thin);border-radius:11px;padding:8px 10px;font-size:11px;line-height:1.2;white-space:nowrap;min-height:34px;text-align:left}
 .chat-prompt:hover{background:var(--item-hover)}
 .chat-prompt:active{transform:scale(.96)}
+.chat-test-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:7px}
+.chat-test-notify{font:inherit;font-size:11px;font-weight:700;padding:10px 12px;border-radius:12px;border:1px solid var(--glass-border);color:var(--ink);background:var(--nav-selected);cursor:pointer}
+.chat-test-notify:active{transform:scale(.97)}
+.chat-test-hint{font-size:10px;color:var(--faint)}
+
 @media(max-width:380px){.chat-topic-row{grid-template-columns:57px minmax(0,1fr)}.chat-topic-label{font-size:9px}.chat-quick{padding-left:9px;padding-right:9px}}
 .typing-bubble{display:flex;align-items:center;gap:5px;min-width:70px;min-height:44px}
 .typing-bubble span{display:block;height:6px;width:6px;border-radius:50%;background:var(--accent);animation:typingPulse 1.05s infinite ease-in-out}
@@ -177,7 +182,7 @@ input[type=range]{max-width:125px;accent-color:var(--accent)}
   const message=document.getElementById('message');
   const toastEl=document.getElementById('toast');
   const mic=document.getElementById('mic');
-  let tab='home';let toastTimeout;let glassOpacity=.79;
+  let tab=new URLSearchParams(window.location.search).get('tab')==='chat'?'chat':'home';let toastTimeout;let glassOpacity=.79;
   const welcome='Привет! Я Хрюндель 🐽 — тестовый чат-бот Floating Dock. Спроси меня про жесты, оформление, навигацию или развитие приложения. Я отвечу с небольшой задержкой!';
   const messages=[{role:'bot',text:welcome}];
   const replyQueue=[];let botTyping=false;let chatVersion=0;let lastTopic='';let unread=0;
@@ -230,6 +235,7 @@ input[type=range]{max-width:125px;accent-color:var(--accent)}
   function quickQuestions(){
     return '<section class="chat-quick" aria-label="Быстрые вопросы Хрюнделю">'+
       '<div class="chat-quick-title"><span>Спросить Хрюнделя</span><span class="chat-quick-hint">Листай вопросы вбок →</span></div>'+
+      '<div class="chat-test-row"><button class="chat-test-notify" type="button" id="testHryundelPush">🐽 Пуш через 20 секунд</button><span class="chat-test-hint">Android 0.2+</span></div>'+
       quickTopics.map((topic,i)=>
         '<div class="chat-topic-row"><span class="chat-topic-label">'+escapeHtml(topic.label)+'</span>'+
         '<div class="chat-chip-track" data-scroll-group="'+i+'" role="group" aria-label="'+escapeHtml(topic.label)+'">'+
@@ -391,13 +397,16 @@ input[type=range]{max-width:125px;accent-color:var(--accent)}
   mini.addEventListener('pointerdown',touchStart);mini.addEventListener('pointerup',e=>touchEnd(e,'expand'));mini.addEventListener('pointercancel',()=>gesture=null);
   mini.addEventListener('click',expand);
   document.getElementById('nav').addEventListener('click',e=>{let b=e.target.closest('[data-tab]');if(!b)return;tab=b.dataset.tab;if(tab==='chat')unread=0;render();if(tab==='chat'){scrollChatBottom();focusComposer()}else scroller.scrollTop=0;});
-  page.addEventListener('click',e=>{const prompt=e.target.closest('[data-prompt]');if(prompt){sendChat(prompt.dataset.prompt);return;}if(e.target.closest('#clearChat')){clearChat();return;}const el=e.target.closest('#darkBtn,#lightBtn');if(!el)return;document.documentElement.dataset.theme=el.id==='darkBtn'?'dark':'light';render();});
+  page.addEventListener('click',e=>{if(e.target.closest('#testHryundelPush')){const bridge=window.AndroidBridge;if(bridge&&typeof bridge.scheduleHryundelNotification==='function'){bridge.scheduleHryundelNotification();notify('Запрашиваю тестовый пуш от Хрюнделя…');}else{notify('Для пуша нужно Android-приложение версии 0.2+');}return;}const prompt=e.target.closest('[data-prompt]');if(prompt){sendChat(prompt.dataset.prompt);return;}if(e.target.closest('#clearChat')){clearChat();return;}const el=e.target.closest('#darkBtn,#lightBtn');if(!el)return;document.documentElement.dataset.theme=el.id==='darkBtn'?'dark':'light';render();});
   page.addEventListener('input',e=>{if(e.target.id==='glassRange'){glassOpacity=Number(e.target.value)/100;document.documentElement.style.setProperty('--glass-a',String(glassOpacity))}});
   page.addEventListener('scroll',e=>{if(e.target.classList?.contains('chat-chip-track')){const i=Number(e.target.dataset.scrollGroup);if(Number.isInteger(i)&&i>=0&&i<quickScroll.length)quickScroll[i]=e.target.scrollLeft;}},true);
   document.getElementById('composer').addEventListener('submit',e=>{e.preventDefault();const t=message.value.trim();if(!t){notify('Напишите сообщение или нажмите на микрофон');return;}message.value='';sendChat(t);focusComposer()});
   function speechError(msg){notify(msg||'Голосовой ввод недоступен на этом устройстве');}
   window.receiveTranscription=function(text){if(typeof text==='string'&&text){message.value=(message.value?message.value+' ':'')+text;expand();notify('Речь преобразована в текст');}else{speechError('Речь не распознана');}}
   window.receiveSpeechError=speechError;
+  window.receiveNotificationStatus=function(text){if(typeof text==='string'&&text)notify(text);};
+  window.openHryundelChat=function(){tab='chat';unread=0;render();scrollChatBottom();};
+
   mic.addEventListener('click',()=>{
     if(window.AndroidBridge&&typeof window.AndroidBridge.startSpeechRecognition==='function'){window.AndroidBridge.startSpeechRecognition();return;}
     const API=window.SpeechRecognition||window.webkitSpeechRecognition;
