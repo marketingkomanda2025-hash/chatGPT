@@ -21,23 +21,23 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p dist
-          gh run download 41468924029 --repo "${{ github.repository }}" --name FloatingDock-debug-APK --dir dist
+          gh run download 41995316046 --repo "${{ github.repository }}" --name FloatingDock-debug-APK --dir dist
           test -s dist/app-debug.apk
           file dist/app-debug.apk
-          mv dist/app-debug.apk dist/FloatingDock-0.1-debug.apk
-          sha256sum dist/FloatingDock-0.1-debug.apk
+          mv dist/app-debug.apk dist/FloatingDock-0.2-debug.apk
+          sha256sum dist/FloatingDock-0.2-debug.apk
       - name: Create public release with direct APK download
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          TAG="floating-dock-v0.1.0-debug"
+          TAG="floating-dock-v0.2.0-debug"
           if gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
-            gh release upload "$TAG" dist/FloatingDock-0.1-debug.apk --repo "${{ github.repository }}" --clobber
+            gh release upload "$TAG" dist/FloatingDock-0.2-debug.apk --repo "${{ github.repository }}" --clobber
           else
-            gh release create "$TAG" dist/FloatingDock-0.1-debug.apk \
+            gh release create "$TAG" dist/FloatingDock-0.2-debug.apk \
               --repo "${{ github.repository }}" \
               --target "${{ github.sha }}" \
-              --title "Floating Dock 0.1 — Android APK" \
-              --notes "Experimental Android WebView application. Opens the latest Floating Dock from GitHub Pages. For testing only; install at your own discretion. Debug build." \
+              --title "Floating Dock 0.2 — Хрюндель local notifications" \
+              --notes "Experimental Android WebView app with local Hryundel notifications. Tap "🐽 Пуш через 20 секунд" in the chat, grant permission, then leave the app. This is a DEBUG-signed test build; if the installer reports a signature mismatch, uninstall the previous Floating Dock before installing version 0.2. Delivery can be delayed by Android power management." \
               --prerelease
           fi
